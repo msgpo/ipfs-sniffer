@@ -1,45 +1,59 @@
+package logsniffer
+
 import (
-	"error"
-	"log"
+	"context"
+	"fmt"
 	"time"
 )
 
 // HashProvider represents a discovered hash and its provider.
 type HashProvider struct {
-	Date     time.Date
+	Date     time.Time
 	Hash     string
 	Provider string
 }
 
+// extract returns nil when no HashProvider is found and an error in unexpected situations.
 func extract(msg Message) (*HashProvider, error) {
 	// Somehow, real life messages are divided into events and operations.
 	// This is not properly documented anywhere.
 	operationType, _ := msg["Operation"]
 	if operationType == "handleAddProvider" {
-		date, exists := msg["Start"]
-		if !exists {
-			return nil, error.Errf("No date in message: %v", msg)
+		rawDate, ok := msg["Start"]
+		if !ok {
+			return nil, fmt.Errorf("'Start' not found in message: %v", msg)
 		}
 
-		tags, exists := msg["Tags"]
-		if !exists {
-			return nil, error.Errf("No tags in message: %v", msg)
+		date, err := time.Parse("2006-01-02T15:04:05.999999999-07:00", rawDate.(string))
+		if err != nil {
+			return nil, fmt.Errorf("Error converting 'Start' into time: %w", err)
 		}
 
-		key, exists := tags["key"]
-		if !exists {
-			return nil, error.Errf("No key in tags of message: %v", msg)
+		rawTags, ok := msg["Tags"]
+		if !ok {
+			return nil, fmt.Errorf("'Tags' not found in message: %#v", msg)
 		}
-		peer, exists := tags["peer"]
-		if !exists {
-			return nil, error.Errf("No peer in tags of message: %v", msg)
+
+		tags, ok := rawTags.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("Could not convert 'Tags' for message: %#v", msg)
+		}
+
+		key, ok := tags["key"].(string)
+		if !ok {
+			return nil, fmt.Errorf("Could not read 'key' in tags of message: %#v", msg)
+		}
+
+		peer, ok := tags["peer"].(string)
+		if !ok {
+			return nil, fmt.Errorf("Could not read 'peer' in tags of message: %#v", msg)
 		}
 
 		return &HashProvider{
 			Date:     date,
 			Hash:     key,
 			Provider: peer,
-		}
+		}, nil
 	}
 
 	return nil, nil
@@ -59,7 +73,9 @@ func HashProviderExtractor(ctx context.Context, msgs <-chan Message, hashes chan
 				errc <- err
 			}
 
-			hashes <- hash
+			if hash != nil {
+				hashes <- *hash
+			}
 		}
 	}
 }

@@ -13,29 +13,6 @@ import (
 
 var ipfsURL = "localhost:5001"
 
-func processMessage(msg logsniffer.Message) {
-	_, isEvent := msg["event"]
-	if isEvent {
-		// log.Printf("Found event: %s\n", eventType)
-		fmt.Printf(".")
-	} else {
-		operationType, isOperation := msg["Operation"]
-		if isOperation {
-			// log.Printf("Found operation: %s\n", operationType)
-			fmt.Printf(".")
-
-			if operationType == "handleAddProvider" {
-				log.Printf("------------- Whooop!!!!")
-				log.Printf("%v", msg)
-			}
-		} else {
-			log.Printf("Unknown log message: %v\n", msg)
-
-		}
-	}
-
-}
-
 // onSigTerm calls f() when SIGTERM (control-C) is received
 func onSigTerm(f func()) {
 	sigChan := make(chan os.Signal, 2)
@@ -87,20 +64,24 @@ func main() {
 		}
 	}()
 
-	// Create channels for messages/errors
+	// Create channels for messages/errors/hashes
 	msgs := make(chan logsniffer.Message)
+	hashes := make(chan logsniffer.HashProvider)
 	errc := make(chan error, 1)
 
 	// Read messages, asynchroneously
 	go reader.Read(msgs, errc)
+
+	// Extract hashes, asynchroneously
+	go logsniffer.HashProviderExtractor(ctx, msgs, hashes, errc)
 
 	// Process messages
 	for {
 		select {
 		case err := <-errc:
 			log.Fatalf("Error reading log messages: %s", err)
-		case msg := <-msgs:
-			processMessage(msg)
+		case hash := <-hashes:
+			log.Printf("Found hash provider: %v\n", hash)
 		}
 	}
 }
