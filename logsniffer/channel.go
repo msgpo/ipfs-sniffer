@@ -14,33 +14,33 @@ type Reader struct {
 }
 
 // Open a logger for the shell.
-func (l *Reader) Open(ctx context.Context, sh *shell.Shell) error {
+func (r *Reader) Open(ctx context.Context, sh *shell.Shell) error {
 	logger, err := sh.GetLogs(ctx)
 
-	l.logger = logger
-	l.ctx = ctx
+	r.logger = logger
+	r.ctx = ctx
 
 	return err
 }
 
 // Close the logger.
-func (l *Reader) Close() error {
-	return l.logger.Close()
+func (r *Reader) Close() error {
+	return r.logger.Close()
 }
 
 // Read messages from log channel until context closes, writing errors to the error channel.
-func (l *Reader) Read() {
+func (r *Reader) Read() {
 	for {
-		msg, err := l.logger.Next()
+		msg, err := r.logger.Next()
 		if err != nil {
-			l.Errors <- err
+			r.Errors <- err
 		}
 
 		select {
-		case <-l.ctx.Done():
+		case <-r.ctx.Done():
 			// Context closed
-			l.Errors <- l.ctx.Err()
-		case l.Messages <- msg:
+			r.Errors <- r.ctx.Err()
+		case r.Messages <- msg:
 		}
 	}
 }
