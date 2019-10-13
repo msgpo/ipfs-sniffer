@@ -39,8 +39,9 @@ func (r *Reader) Read(msgs chan<- Message, errc chan<- error) {
 
 		select {
 		case <-r.ctx.Done():
-			// Context closed
+			// Context closed, return
 			errc <- r.ctx.Err()
+			return
 		case msgs <- msg:
 		}
 	}
