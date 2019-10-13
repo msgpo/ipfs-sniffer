@@ -6,6 +6,9 @@ import (
 	"github.com/ipfs-search/ipfs-sniffer/logsniffer"
 	shell "github.com/ipfs/go-ipfs-api"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 var ipfsURL = "localhost:5001"
@@ -33,12 +36,37 @@ func processMessage(msg logsniffer.Message) {
 
 }
 
+// onSigTerm calls f() when SIGTERM (control-C) is received
+func onSigTerm(f func()) {
+	sigChan := make(chan os.Signal, 2)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	var fail = func() {
+		<-sigChan
+		os.Exit(1)
+	}
+
+	var quit = func() {
+		<-sigChan
+
+		go fail()
+
+		fmt.Println("Received SIGTERM, quitting... One more SIGTERM and we'll abort!")
+		f()
+	}
+
+	go quit()
+}
+
 func main() {
+	// Create context
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Allow SIGTERM / Control-C quit through context
+	onSigTerm(cancel)
+
 	// Open shell
 	sh := shell.NewShell(ipfsURL)
-
-	// Create context
-	ctx := context.Background()
 
 	// Create channels for messages/errors
 	msgs := make(chan logsniffer.Message, 1)
@@ -73,7 +101,7 @@ func main() {
 	for {
 		select {
 		case err := <-reader.Errors:
-			log.Fatal(err)
+			log.Fatalf("Error reading log messages: %s", err)
 		case msg := <-reader.Messages:
 			processMessage(msg)
 		}

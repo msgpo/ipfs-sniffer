@@ -3,7 +3,6 @@ package logsniffer
 import (
 	"context"
 	shell "github.com/ipfs/go-ipfs-api"
-	"log"
 )
 
 // Reader provides a reader with a channel of IPFS log messages.
@@ -40,7 +39,6 @@ func (l *Reader) Read() {
 		select {
 		case <-l.ctx.Done():
 			// Context closed
-			log.Printf("Stop reading log messages: %s", l.ctx.Err())
 			l.Errors <- l.ctx.Err()
 		case l.Messages <- msg:
 		}
