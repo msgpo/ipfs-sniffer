@@ -5,6 +5,9 @@ import (
 	shell "github.com/ipfs/go-ipfs-api"
 )
 
+// Message represents a single log message, based on the go-ipfs-api interface.
+type Message map[string]interface{}
+
 // Reader provides a reader with a channel of IPFS log messages.
 type Reader struct {
 	logger shell.Logger
