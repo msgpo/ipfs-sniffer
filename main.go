@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	shell "github.com/ipfs/go-ipfs-api"
@@ -31,7 +30,20 @@ func printlogs(ctx context.Context, sh *shell.Shell) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("%v\n", msg)
+
+		eventType, isEvent := msg["event"]
+		if isEvent {
+			log.Printf("Found event: %s\n", eventType)
+		} else {
+			operationType, isOperation := msg["Operation"]
+			if isOperation {
+				log.Printf("Found operation: %s\n", operationType)
+
+			} else {
+				log.Printf("Unknown log message: %v\n", msg)
+
+			}
+		}
 	}
 
 	return nil
