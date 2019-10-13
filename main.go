@@ -88,7 +88,7 @@ func main() {
 	}()
 
 	// Create channels for messages/errors
-	msgs := make(chan logsniffer.Message, 1)
+	msgs := make(chan logsniffer.Message)
 	errc := make(chan error, 1)
 
 	// Read messages, asynchroneously
