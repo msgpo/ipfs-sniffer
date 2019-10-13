@@ -68,15 +68,8 @@ func main() {
 	// Open shell
 	sh := shell.NewShell(ipfsURL)
 
-	// Create channels for messages/errors
-	msgs := make(chan logsniffer.Message, 1)
-	errs := make(chan error, 1)
-
 	// Initialize reader
-	reader := logsniffer.Reader{
-		Errors:   errs,
-		Messages: msgs,
-	}
+	reader := logsniffer.Reader{}
 
 	log.Printf("Opening log reader")
 	err := reader.Open(ctx, sh)
@@ -94,15 +87,19 @@ func main() {
 		}
 	}()
 
+	// Create channels for messages/errors
+	msgs := make(chan logsniffer.Message, 1)
+	errc := make(chan error, 1)
+
 	// Read messages, asynchroneously
-	go reader.Read()
+	go reader.Read(msgs, errc)
 
 	// Process messages
 	for {
 		select {
-		case err := <-reader.Errors:
+		case err := <-errc:
 			log.Fatalf("Error reading log messages: %s", err)
-		case msg := <-reader.Messages:
+		case msg := <-msgs:
 			processMessage(msg)
 		}
 	}
