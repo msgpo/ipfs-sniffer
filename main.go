@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/ipfs-search/ipfs-sniffer/logsniffer"
+	"github.com/ipfs-search/ipfs-sniffer/logsniffer/hashset"
 	shell "github.com/ipfs/go-ipfs-api"
 	"log"
 	"os"
@@ -69,11 +70,16 @@ func main() {
 	hashes := make(chan logsniffer.HashProvider)
 	errc := make(chan error, 1)
 
+	hs := hashset.New()
+
 	// Read messages, asynchroneously
 	go reader.Read(msgs, errc)
 
 	// Extract hashes, asynchroneously
 	go logsniffer.HashProviderExtractor(ctx, msgs, hashes, errc)
+
+	// Update hashset, asynchroneously
+	go hs.FromChannel(ctx, hashes, errc)
 
 	// Process messages
 	for {
@@ -81,8 +87,6 @@ func main() {
 		case err := <-errc:
 			log.Fatalf("Error processing log messages: %s", err)
 			cancel()
-		case hash := <-hashes:
-			log.Printf("Found hash provider: %v\n", hash)
 		}
 	}
 }
