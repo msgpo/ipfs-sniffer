@@ -79,7 +79,8 @@ func main() {
 	for {
 		select {
 		case err := <-errc:
-			log.Fatalf("Error reading log messages: %s", err)
+			log.Fatalf("Error processing log messages: %s", err)
+			cancel()
 		case hash := <-hashes:
 			log.Printf("Found hash provider: %v\n", hash)
 		}
